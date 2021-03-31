@@ -1,3 +1,3 @@
-# django-boilerplate
+# Django-boilerplate
 
-An Django based app which allow users to create and launch django project using a web UI.
+A Django based app which allow users to create and launch django project using a web UI.
