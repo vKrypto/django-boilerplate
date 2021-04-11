@@ -1,6 +1,10 @@
+from django.http import HttpResponse
 from django.shortcuts import render
+from .utils import hello
 
 
-# Create your views here.
+# create your views here.
 def home(request):
-    if request.method=='POST':
+    print(">>>>>>>>")
+    hello.delay()
+    return HttpResponse("oK")
