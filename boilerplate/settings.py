@@ -81,6 +81,12 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default='postgres://saleor:saleor@localhost:5432/boilerplate',
+#         conn_max_age=15)
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -127,7 +133,10 @@ STATIC_URL = '/static/'
 # CELERY_TIMEZONE = 'Asia/Kolkata'
 
 # CELERY SETTINGS https://docs.celeryproject.org/en/latest/django/first-steps-with-django.html
+USE_CELERY = False
 CELERY_BROKER_URL = 'redis://localhost:6379' or 'amqp://localhost'
+if not USE_CELERY:
+    CELERY_BROKER_URL = ''
 CELERY_TASK_ALWAYS_EAGER = False if CELERY_BROKER_URL else True
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
