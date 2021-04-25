@@ -8,3 +8,9 @@ def home(request):
     print(">>>>>>>>")
     hello.delay()
     return HttpResponse("oK")
+
+
+def deploy_project(request):
+    job = Job.objects.create()
+    start_job_execution.delay(job.token)
+    return HttpResponse("project rendered..")

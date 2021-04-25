@@ -1,9 +1,10 @@
+# global imports
 from django.utils.timezone import now
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from jsonfield import JSONField
 from pathlib import Path
-from django.db.models import Q
 from uuid import uuid4
 # local imports
 from . import JobStatus

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head> 
+    <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+        <title>{% block title %}{% endblock%}</title>
+        {% include './includes/_headers.html' %}
+    </head>
+</head> 
+<body class="{% block body_class %}{% endblock body_class %}">
+    <main>  
+        {% block content %}{% endblock content %}
+    </main>
+    {% include './includes/_bundled_assets.html' %}    
+</body>
+</html>

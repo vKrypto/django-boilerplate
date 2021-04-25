@@ -1,15 +1,34 @@
+# global imports
 from celery import shared_task
-from datetime import datetime
 from django.conf import settings
-from pathlib import Path
 import os
 import subprocess
+# local imports
+from .models import Job
+
 # local variables
-from .models import Job, JobStatus
+TEMPLATE_DIR = settings.BASE_DIR.joinpath('conf')
+
+
+class Branch:
+    PROJECT = 'render_project_architecture'
+    RENDER_APPS = 'render_apps'
+    DB_SETUP = 'initialize_db'
+    OPTIMIZE_CODE = "optimization"
 
 
 def dump_logs():
     pass
+
+
+def _create_gitignore():
+    """
+    create a .gitignore file in final build to avoid venv files
+    """
+    gitignore = open(".gitignore", "w")
+    entries = ["venv"]
+    gitignore.write("\n".join(entries))
+    gitignore.close()
 
 
 def switch_dir(dir_path):
@@ -17,11 +36,17 @@ def switch_dir(dir_path):
 
 
 def _bash(job_token: str, shell_command: str, about: str):
+    """
+    raise error, and stop further processing of job, and keep error logs
+    """
     proc = subprocess.Popen(shell_command, stdout=subprocess.PIPE, shell=True)
     (output, error) = proc.communicate()
     job = Job.objects.get(token=job_token)
     job_log = job.logs.create(shell_command=shell_command, output=output, error=error, about=about)
     job_log.dump_log()
+    if error:
+        raise Exception(error)
+    print(about)
 
 
 # def write_log(file_path, log):
@@ -37,12 +62,29 @@ def hello():
     print("hello")
 
 
+def test():
+    start_job_execution(Job.objects.first().token)
+
+
 @shared_task()
 def start_job_execution(token: str):
     job = Job.objects.get(token=token)
-    switch_dir(job.project_dir)
-    create_fresh_environment(token)
-    prepare_environment(token)
+    switch_dir(job.project_dir)  # step 1: switch into workspace dir
+    create_fresh_environment(token)  # step 2: create a fresh environment.
+    prepare_environment(token)  # step 3: prepare environment for project.
+    initialize_git(token)  # step 4: initialize git to create version control, while developing.
+    git_checkout(token, Branch.PROJECT)  # step 5: commit changes and switch branch for project-architecture render
+    render_project(token)  # step 6: create project architecture..
+    git_checkout(token, Branch.RENDER_APPS)  # step 7: commit changes and switch branch for rendering apps .
+    render_core_app(token)  # step 8: render core app.
+    render_account_app(token)  # step 9: render account app
+    # render_custom_app(token)  # step 9: render custom app
+    git_checkout(token, Branch.DB_SETUP)  # step 10: commit changes and switch branch for further process
+    run_migrations(token)  # step 11: run migrations, and initialize db
+    collect_static(token)  # step 12: collect all static files
+    internationalization(token)  # step 13: creating trans messages for project
+    system_check(token)  # step 14: running system checks..
+    git_checkout(token, Branch.OPTIMIZE_CODE)  # step 15: commit changes and switch branch for further process
 
 
 @shared_task()
@@ -60,10 +102,11 @@ def prepare_environment(token: str):
     """
     pip_modules = ['django', 'split-settings', 'django-allauth',
                    'django-debug-toolbar', 'django-templated-email', 'django-redis']
-    _bash(token, "source venv/bin/activate", "activating virtual environment")
-    _bash(token, "pip install --upgrade pip", "upgrading pip module")
-    _bash(token, "pip install " + " ".join(pip_modules), "installing required dependencies")
-    _bash(token, "pip freeze > requirements.txt", "lock pip version")
+    # _bash(token, "source venv/bin/activate", "activating virtual environment")  # source not works in os.system()
+    _bash(token, "venv/bin/pip install --upgrade pip", "upgrading pip module")
+    _bash(token, "venv/bin/pip install " + " ".join(pip_modules), "installing required dependencies")
+    _bash(token, "echo '" + "\n".join(pip_modules) + "' > requirements.txt", "writing pip modules.")
+    _bash(token, "venv/bin/pip freeze > lock_requirements.txt", "lock pip version")
 
 
 @shared_task()
@@ -84,31 +127,50 @@ def git_checkout(token, new_branch_name):
 
 
 @shared_task()
-def render_project():
+def render_project(token):
     """
     render project conf and settings, create project structure,
     make and run initial migrations,
     set site info objects in models
     """
-    pass
+    shell_cmd = "venv/bin/django-admin startproject project --verbosity 2 --template " + str(
+        TEMPLATE_DIR.joinpath('project_template'))
+    _bash(token, shell_cmd, "Generating project Architecture")
 
 
 @shared_task()
-def render_core_app():
+def render_core_app(token):
     """
     configure core apps, with customization,
     render frontend  html css bootstrap.
     """
-    pass
+    _bash(token, "mkdir project/apps/core", "creating core folder.")
+    shell_cmd = "venv/bin/django-admin startapp core project/apps/core --verbosity 2 --template " + str(
+        TEMPLATE_DIR.joinpath('core_template'))
+    _bash(token, shell_cmd, "Rendering core app.")
 
 
 @shared_task()
-def render_account_app():
+def render_account_app(token):
     """
     render account app, with user requirements,
     make and run migrations and initialize db with keys if required.
     """
-    pass
+    _bash(token, "mkdir project/apps/accounts", "creating accounts folder.")
+    shell_cmd = "venv/bin/django-admin startapp accounts project/apps/accounts --verbosity 2 --template " + str(
+        TEMPLATE_DIR.joinpath('account_template'))
+    _bash(token, shell_cmd, "Rendering account app.")
+
+
+@shared_task()
+def run_migrations(token):
+    """
+    delete all apps migrations and,
+    regenerate them and migrate as fake.
+    """
+    bash_command = "venv/bin/python3 project/manage.py"
+    _bash(token, bash_command + " makemigrations", "running makemigrations.")
+    _bash(token, bash_command + " migrate", "migrating Database.")
 
 
 @shared_task()
@@ -121,27 +183,30 @@ def clean_migrations():
 
 
 @shared_task()
-def collect_static():
+def collect_static(token):
     """
     collect static to corresponding storage locations.
     """
-    pass
+    _bash(token, "venv/bin/python3 project/manage.py collectstatic --noinput", "collecting static files.")
 
 
 @shared_task()
-def internationalization():
+def internationalization(token):
     """
     django trans:
     generate, compile messages for project in different languages.
     """
-    pass
+    base_command = "venv/bin/python3 project/manage.py"
+    _bash(token, base_command + " makemessages --ignore venv --all", "generating messages for project.")
+    _bash(token, base_command + " compilemessages", "compiling messages for project.")
 
 
 @shared_task()
-def system_check():
+def system_check(token):
     """
     perform system_checks, checks that app is running or not.
     """
+    _bash(token, "venv/bin/python3 project/manage.py check", "checking system issues.")
 
 
 @shared_task()
