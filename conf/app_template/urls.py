@@ -29,11 +29,11 @@ Including another URLconf
 
 # gloabl import
 from django.urls import path, include
-from django.conf.urls import url
+from django.urls import re_path
 
 #local import
 from .views import *
 
 urlpatterns = [
-    # url(r'^$', HomePagePiew.as_view(), name='home'),
+    # re_path(r'^$', HomePagePiew.as_view(), name='home'),
 ]

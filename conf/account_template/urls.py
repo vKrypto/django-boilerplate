@@ -15,8 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 # gloabl import
-from django.urls import path, include
-from django.conf.urls import url
+from django.urls import path, include, re_path
 
 #local import
 from .views import *
@@ -24,6 +23,6 @@ from .views import *
 urlpatterns = [
     path(r'', include('allauth.urls')),
     # url(r'^signup/$', SignupView.as_view(), name='account_signup'),
-    url(r'^login/$', LoginView.as_view(), name='account_login'),
-    url(r'^logout/$', LogoutView.as_view(), name='account_logout'),
+    re_path(r'^login/$', LoginView.as_view(), name='account_login'),
+    re_path(r'^logout/$', LogoutView.as_view(), name='account_logout'),
 ]

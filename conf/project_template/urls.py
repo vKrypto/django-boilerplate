@@ -16,12 +16,11 @@ Including another URLconf
 import os
 from django.contrib import admin
 from django.conf import settings
-from django.urls import path, include
-from django.conf.urls import url
+from django.urls import path, include, re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    url(r'', include('apps.core.urls'))
+    re_path(r'', include('apps.core.urls'))
 ]
 
 APPS_DIR = settings.BASE_DIR.joinpath('apps')
